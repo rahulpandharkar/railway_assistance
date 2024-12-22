@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Assistant - Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Add CSS for loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hide the loader initially */
+        .loader-container {
+            display: none;
+            text-align: center;
+        }
+
+        /* Chat box styles */
+        #chat-box {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Railway Assistant</h1>
+    <p>Welcome, <strong>{{ name }}</strong> (PNR: {{ pnr }})</p>
+
+    <div id="chat-box">
+        {% for message in chat_history %}
+            <div>
+                {% if message.type == 'image' %}
+                    <img src="{{ message.content }}" width="150">
+                    <p>{{ message.response }}</p>
+                {% else %}
+                    <p><strong>You:</strong> {{ message.content }}</p>
+                    <p><strong>Assistant:</strong> {{ message.response }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Loader spinner container -->
+    <div id="loader-container" class="loader-container">
+        <div class="loader"></div>
+        <p>Loading...</p>
+    </div>
+
+    <div class="input-section">
+        <!-- Upload Button -->
+        <label for="imageInput" class="upload-icon">
+            <img src="https://img.icons8.com/ios-filled/50/000000/upload.png" alt="Upload" width="24" height="24">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        </label>
+    
+        <!-- Textarea for typing queries -->
+        <textarea id="textInput" placeholder="Type your query here..."></textarea>
+    
+        <!-- Send Button -->
+        <button id="sendButton" onclick="sendMessage()">
+            <img src="https://img.icons8.com/?size=50&id=7874&format=png" alt="Send" width="20" height="20">
+        </button>
+    </div>
+</div>
+
+<script>
+    function sendMessage() {
+        const chatBox = document.getElementById('chat-box');
+        const loaderContainer = document.getElementById('loader-container');
+        const message = document.getElementById('textInput').value.trim();
+        const imageInput = document.getElementById('imageInput').files[0];
+
+        let formData = new FormData();
+        
+        // Append the message or image file to the formData
+        if (imageInput) {
+            formData.append('image', imageInput);
+        }
+        if (message) {
+            formData.append('message', message);
+        }
+
+        // Show the loader
+        loaderContainer.style.display = 'block';
+
+        // Send the request to the server
+        fetch('/chat-api', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loader
+                loaderContainer.style.display = 'none';
+
+                // Display previous chat messages
+                chatBox.innerHTML = '';
+                data.chat_history.forEach(function(message) {
+                    if (message.type === 'image') {
+                        chatBox.innerHTML += `<div><img src="${message.content}" width="150"><p>${message.response}</p></div>`;
+                    } else {
+                        chatBox.innerHTML += `<div><p><strong>You:</strong> ${message.content}</p><p><strong>Assistant:</strong> ${message.response}</p></div>`;
+                    }
+                });
+
+                // Clear input fields after sending
+                document.getElementById('textInput').value = '';
+                document.getElementById('imageInput').value = ''; // Clear file input
+            })
+            .catch(error => {
+                // Hide the loader if there's an error
+                loaderContainer.style.display = 'none';
+                console.error('Error:', error);
+            });
+    }
+</script>
+</body>
+</html>
